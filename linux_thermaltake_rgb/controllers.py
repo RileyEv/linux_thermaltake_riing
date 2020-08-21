@@ -29,11 +29,13 @@ class ThermaltakeController(ClassifiedObject):
         self.ports = 5
         self.init()
         if self.driver is None:
-            raise RuntimeError('driver not set')
+            raise RuntimeError("driver not set")
 
     @classmethod
     def factory(cls, unit_type, unit_identifier=None):
         subclass_dict = {clazz.model: clazz for clazz in cls.inheritors()}
+        print(subclass_dict)
+        print(unit_type)
         try:
             # TODO: remove copy pasta
             if unit_identifier is not None:
@@ -41,7 +43,7 @@ class ThermaltakeController(ClassifiedObject):
             else:
                 return subclass_dict.get(unit_type.lower())()
         except KeyError as e:
-            LOGGER.warn('%s not a valid controller type', e)
+            LOGGER.warn("%s not a valid controller type", e)
 
     def init(self):
         pass
@@ -55,7 +57,7 @@ class ThermaltakeController(ClassifiedObject):
 
 
 class ThermaltakeG3Controller(ThermaltakeController):
-    model = 'g3'
+    model = "g3"
 
     def __init__(self, unit=1):
         super().__init__()
@@ -68,15 +70,23 @@ class ThermaltakeG3Controller(ThermaltakeController):
 
 
 class ThermaltakeRiingTrioController(ThermaltakeController):
-    model = 'riingtrio'
-    
+    model = "riingtrio"
+
     def init(self):
         self.driver = drivers.ThermaltakeRiingTrioControllerDriver(self.unit)
 
 
-def controller_factory(unit_type=None, unit=1, **kwargs) -> ThermaltakeController:
-    if unit_type.lower() == 'g3':
-        return ThermaltakeG3Controller(unit)
+class ThermaltakeStandardController(ThermaltakeController):
+    model = "standard"
 
-    elif unit_type.lower() == 'riingtrio':
+    def init(self):
+        self.driver = drivers.ThermaltakeStandardControllerDriver(self.unit)
+
+
+def controller_factory(unit_type=None, unit=1, **kwargs) -> ThermaltakeController:
+    if unit_type.lower() == "g3":
+        return ThermaltakeG3Controller(unit)
+    elif unit_type.lower() == "riingtrio":
         return ThermaltakeRiingTrioController(unit)
+    elif unit_type.lower() == "standard":
+        return ThermaltakeStandardController(unit)

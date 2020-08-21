@@ -66,15 +66,17 @@ class LightingEffect(ClassifiedObject):
     def __init__(self, config):
         self._config = config
         self._devices = []
-        LOGGER.info(f'initializing {self.__class__.__name__} light controller')
+        LOGGER.info(f"initializing {self.__class__.__name__} light controller")
 
     @classmethod
     def factory(cls, config: dict):
         subclass_dict = {clazz.model: clazz for clazz in cls.inheritors()}
         try:
-            return subclass_dict.get(config.pop('model').lower())(config)
+            return subclass_dict.get(config.pop("model").lower())(config)
         except KeyError as e:
-            LOGGER.warn('%s not found in config item', e)
+            LOGGER.warn("%s not found in config item", e)
+        except TypeError as e:
+            LOGGER.warn("Model is not found", e)
 
     def attach_device(self, device):
         self._devices.append(device)
@@ -94,7 +96,7 @@ class CustomLightingEffect(LightingEffect):
 
     def __init__(self, config):
         super().__init__(config)
-        conf_speed = self._config.get('speed', 'normal')
+        conf_speed = self._config.get("speed", "normal")
         self._speed = getattr(self, conf_speed.upper())
 
     def start(self):
@@ -132,13 +134,14 @@ class AlternatingLightingEffect(CustomLightingEffect):
     """
     ::: settings: [odd_rgb:{r,g,b}, even_rgb:{r,g,b}]
     """
-    model = 'alternating'
-    RGBMap = namedtuple('RGBMap', ['g', 'r', 'b'])
+
+    model = "alternating"
+    RGBMap = namedtuple("RGBMap", ["g", "r", "b"])
 
     def __init__(self, config):
         super().__init__(config)
-        self.odd_rgb = self.RGBMap(**self._config.get('odd_rgb'))
-        self.even_rgb = self.RGBMap(**self._config.get('even_rgb'))
+        self.odd_rgb = self.RGBMap(**self._config.get("odd_rgb"))
+        self.even_rgb = self.RGBMap(**self._config.get("even_rgb"))
 
     def start(self):
         for dev in self._devices:
@@ -151,14 +154,15 @@ class AlternatingLightingEffect(CustomLightingEffect):
             dev.set_lighting(values=values)
 
     def __str__(self) -> str:
-        return f'alternating lighting {self.odd_rgb} {self.even_rgb}'
+        return f"alternating lighting {self.odd_rgb} {self.even_rgb}"
 
 
 class TemperatureLightingEffect(ThreadedCustomLightingEffect):
     """
     ::: settings: [speed, cold, hot, target, sensor_name]
     """
-    model = 'temperature'
+
+    model = "temperature"
 
     cold_angle = 240
     target_angle = 120
@@ -166,10 +170,10 @@ class TemperatureLightingEffect(ThreadedCustomLightingEffect):
 
     def __init__(self, config):
         super().__init__(config)
-        self.sensor_name = self._config.get('sensor_name')
-        self.cold = int(self._config.get('cold', 20))
-        self.target = int(self._config.get('target', 30))
-        self.hot = int(self._config.get('hot', 60))
+        self.sensor_name = self._config.get("sensor_name")
+        self.cold = int(self._config.get("cold", 20))
+        self.target = int(self._config.get("target", 30))
+        self.hot = int(self._config.get("hot", 60))
         self.cur_temp = 0
         self.angle = 0
 
@@ -181,29 +185,33 @@ class TemperatureLightingEffect(ThreadedCustomLightingEffect):
         if self.cur_temp <= self.cold:
             self.angle = self.cold_angle
         elif self.cur_temp < self.target:
-            self.angle = ((self.cold_angle - self.target_angle)
-                          / (self.target - self.cold)
-                          * (self.target - self.cur_temp))
+            self.angle = (
+                (self.cold_angle - self.target_angle)
+                / (self.target - self.cold)
+                * (self.target - self.cur_temp)
+            )
         elif self.cur_temp == self.target:
             self.angle = self.target_angle
         elif self.cur_temp > self.hot:
             self.angle = self.hot_angle
         elif self.cur_temp > self.target:
-            self.angle = 120 - ((self.target_angle - self.hot_angle)
-                                / (self.hot - self.target)
-                                * (self.cur_temp - self.target))
+            self.angle = 120 - (
+                (self.target_angle - self.hot_angle)
+                / (self.hot - self.target)
+                * (self.cur_temp - self.target)
+            )
         for dev in self._devices:
             values = flatten([compass_to_rgb(self.angle)] * dev.num_leds)
             dev.set_lighting(values=values)
 
     def __str__(self) -> str:
-        return f'temperature lighting'
+        return f"temperature lighting"
 
 
 class ThermaltakeLightingEffect(LightingEffect):
     def __init__(self, config):
         super().__init__(config)
-        conf_speed = self._config.get('speed', 'normal')
+        conf_speed = self._config.get("speed", "normal")
         self._speed = getattr(RGB.Speed, conf_speed.upper())
 
     def start(self):
@@ -214,16 +222,17 @@ class FullLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [r, g, b]
     """
-    model = 'full'
+
+    model = "full"
 
     def start(self):
         values = []
         try:
-            g, r, b = self._config['g'], self._config['r'], self._config['b']
+            g, r, b = self._config["g"], self._config["r"], self._config["b"]
             for i in range(12):
                 values.extend([g, r, b])
         except KeyError as e:
-            LOGGER.warn('%s not found in config item: lighting_controller', e)
+            LOGGER.warn("%s not found in config item: lighting_controller", e)
 
         for device in self._devices:
             device.set_lighting(mode=RGB.Mode.FULL, speed=0x00, values=values)
@@ -239,7 +248,8 @@ class OffLightingEffect(ThermaltakeLightingEffect):
 
     ::: settings: []
     """
-    model = 'off'
+
+    model = "off"
 
     def start(self):
         for device in self._devices:
@@ -249,16 +259,16 @@ class OffLightingEffect(ThermaltakeLightingEffect):
 class PerLEDLightingEffect(ThermaltakeLightingEffect):
     # TODO: per-led config
     # TODO: design a neat way to set this up via config (surely theres a better way then a massive array)
-    model = 'perled'
+    model = "perled"
 
     def start(self):
         values = []
         try:
-            g, r, b = self._config['g'], self._config['r'], self._config['b']
+            g, r, b = self._config["g"], self._config["r"], self._config["b"]
             for i in range(12):
                 values.extend([g, r, b])
         except KeyError as e:
-            LOGGER.warn('%s not found in config item: lighting_controller', e)
+            LOGGER.warn("%s not found in config item: lighting_controller", e)
 
         for device in self._devices:
             device.set_lighting(mode=RGB.Mode.BY_LED, speed=0x00, values=values)
@@ -268,7 +278,8 @@ class FlowLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [speed]
     """
-    model = 'flow'
+
+    model = "flow"
 
     def start(self):
         for device in self._devices:
@@ -279,7 +290,8 @@ class SpectrumLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [speed]
     """
-    model = 'spectrum'
+
+    model = "spectrum"
 
     def start(self):
         for device in self._devices:
@@ -290,17 +302,20 @@ class RippleLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [speed, r, g, b]
     """
-    model = 'ripple'
+
+    model = "ripple"
 
     def start(self):
         try:
-            g, r, b = self._config['g'], self._config['r'], self._config['b']
+            g, r, b = self._config["g"], self._config["r"], self._config["b"]
         except KeyError as e:
-            LOGGER.warn('%s not found in config item: lighting_controller', e)
+            LOGGER.warn("%s not found in config item: lighting_controller", e)
             return
 
         for device in self._devices:
-            device.set_lighting(mode=RGB.Mode.RIPPLE, speed=self._speed, values=[g, r, b])
+            device.set_lighting(
+                mode=RGB.Mode.RIPPLE, speed=self._speed, values=[g, r, b]
+            )
 
 
 class BlinkLightingEffect(ThermaltakeLightingEffect):
@@ -309,13 +324,13 @@ class BlinkLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [speed, r, g, b]
     """
-    model = 'blink'
+    model = "blink"
 
     def start(self):
         try:
-            g, r, b = self._config['g'], self._config['r'], self._config['b']
+            g, r, b = self._config["g"], self._config["r"], self._config["b"]
         except KeyError as e:
-            LOGGER.warn('%s not found in config item: lighting_controller', e)
+            LOGGER.warn("%s not found in config item: lighting_controller", e)
             return
 
         for device in self._devices:
@@ -331,13 +346,13 @@ class PulseLightingEffect(ThermaltakeLightingEffect):
     """
     ::: settings: [speed, r, g, b]
     """
-    model = 'pulse'
+    model = "pulse"
 
     def start(self):
         try:
-            g, r, b = self._config['g'], self._config['r'], self._config['b']
+            g, r, b = self._config["g"], self._config["r"], self._config["b"]
         except KeyError as e:
-            LOGGER.warn('%s not found in config item: lighting_controller', e)
+            LOGGER.warn("%s not found in config item: lighting_controller", e)
             return
 
         for device in self._devices:
@@ -351,7 +366,43 @@ class WaveLightingEffect(ThermaltakeLightingEffect):
     # TODO: per-led config
     # TODO: design a neat way to set this up via config (surely theres a better way then a massive array)
     # 14=wave    requires values (spinning per led)
-    model = 'wave'
+    model = "wave"
 
     def start(self):
         raise NotImplementedError
+
+
+class StaticRGBEffect(ThreadedCustomLightingEffect):
+
+    model = "static"
+
+    def next(self):
+        def get_values(string: str) -> list:
+            return list(
+                map(
+                    lambda a: int(a, base=16),
+                    [string[i : i + 2] for i in range(0, len(string), 2)],
+                )
+            )
+
+        for device in self._devices:
+            if device.num_leds == 54:
+                values = get_values(
+                    "00b20038b20069b200b2b200b27e00b20000b2007e8c00b23f00b20038b2"
+                    "007eb200b23800b20038b20069b200b2b200b27e00b2000000b20038b20069b200b2"
+                    "b200b27e00b20000b2007e8c00b23f00b20038b2007eb200b23800b20038b20069b2"
+                    "00b2b200b27e00b2000000b20038b20069b200b2b200b27e00b20000b2007e8c00b2"
+                    "3f00b200b20038b20069b200b2b200b27e00b20000b2007e8c00b23f00b200000000"
+                    "00000000000000000000000000000000000000000000"
+                )
+
+            else:
+                values = get_values(
+                    "00b20038b20069b200b2b200b27e00b20000b2007e8c00b23f00b20038b2007eb200"
+                    "b23800b20038b20069b200b2b200b27e00b2000000b20038b20069b200b2b200b27e"
+                    "00b20000b2007e8c00b23f00b20038b2007eb200b23800b20038b20069b200b2b200"
+                    "b27e00b2000000b20038b20069b200b2b200b27e00b20000b2007e8c00b23f00b200"
+                    "b20038b20069b2000000000000000000000000000000000000000000000000000000"
+                    "000000000000000000000000000000000000"
+                )
+            device.set_lighting(mode=RGB.Mode.STATIC, speed=0, values=values)

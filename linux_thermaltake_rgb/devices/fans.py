@@ -21,6 +21,16 @@ from linux_thermaltake_rgb.devices import ThermaltakeRGBDevice, ThermaltakeFanDe
 
 
 class ThermaltakeRiingPlusFan(ThermaltakeRGBDevice, ThermaltakeFanDevice):
-    model = 'Riing Plus'
+    model = "Riing Plus"
     num_leds = 12
     index_per_led = 3
+
+
+class ThermaltakeRiingQuadFan(ThermaltakeRGBDevice, ThermaltakeFanDevice):
+    model = "Riing Quad"
+    num_leds = 54
+    index_per_led = 3
+
+    def set_lighting(self, values: list = None, mode=0x18, speed=0x00) -> None:
+        super().set_lighting(values, mode, speed)
+        self.controller.driver.read_in()

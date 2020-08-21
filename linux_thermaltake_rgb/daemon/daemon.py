@@ -30,57 +30,65 @@ from linux_thermaltake_rgb.devices import ThermaltakeDevice
 
 class ThermaltakeDaemon:
     def __init__(self):
-        LOGGER.info('initializing thermaltake rgb daemon')
+        LOGGER.info("initializing thermaltake rgb daemon")
 
-        LOGGER.debug('loading config')
+        LOGGER.debug("loading config")
         self.config = Config()
 
-        LOGGER.debug('creating fan manager')
+        LOGGER.debug("creating fan manager")
         fan_model = FanModel.factory(self.config.fan_manager)
         self.fan_manager = FanManager(fan_model)
 
-        LOGGER.debug('creating lighting manager')
+        LOGGER.debug("creating lighting manager")
         self.lighting_manager = LightingEffect.factory(self.config.lighting_manager)
 
         self.attached_devices = {}
         self.controllers = {}
 
-        LOGGER.debug('configuring controllers')
+        LOGGER.debug("configuring controllers")
         for controller in self.config.controllers:
-            self.controllers[controller['unit']] = ThermaltakeController.factory(controller['type'], controller.get('unit'))
-            for id, model in controller['devices'].items():
-                LOGGER.debug(' configuring devices for controller %s: %s', controller['type'], controller.get('unit'))
-                dev = ThermaltakeDevice.factory(model, self.controllers[controller['unit']], id)
-                self.controllers[controller['unit']].attach_device(id, dev)
-                self.register_attached_device(controller['unit'], id, dev)
+            self.controllers[controller["unit"]] = ThermaltakeController.factory(
+                controller["type"], controller.get("unit")
+            )
+            for id, model in controller["devices"].items():
+                LOGGER.debug(
+                    " configuring devices for controller %s: %s",
+                    controller["type"],
+                    controller.get("unit"),
+                )
+                dev = ThermaltakeDevice.factory(
+                    model, self.controllers[controller["unit"]], id
+                )
+                self.controllers[controller["unit"]].attach_device(id, dev)
+                self.register_attached_device(controller["unit"], id, dev)
 
         self._continue = False
 
     def register_attached_device(self, unit, port, dev=None):
         if isinstance(dev, devices.ThermaltakeFanDevice):
-            LOGGER.debug('  registering %s with fan manager', dev.model)
+            LOGGER.debug("  registering %s with fan manager", dev.model)
             self.fan_manager.attach_device(dev)
         if isinstance(dev, devices.ThermaltakeRGBDevice):
-            LOGGER.debug('  registering %s with lighting manager', dev.model)
+            LOGGER.debug("  registering %s with lighting manager", dev.model)
             self.lighting_manager.attach_device(dev)
 
-        self.attached_devices[f'{unit}:{port}'] = dev
+        self.attached_devices[f"{unit}:{port}"] = dev
 
     def run(self):
         self._continue = True
-        LOGGER.debug('starting lighting manager')
+        LOGGER.debug("starting lighting manager")
         self.lighting_manager.start()
-        LOGGER.debug('starting fan manager')
+        LOGGER.debug("starting fan manager")
         self.fan_manager.start()
 
     def stop(self):
-        LOGGER.debug('recieved exit command')
+        LOGGER.debug("recieved exit command")
         self._continue = False
-        LOGGER.debug('stopping lighting manager')
+        LOGGER.debug("stopping lighting manager")
         self.lighting_manager.stop()
-        LOGGER.debug('stopping fan manager')
+        LOGGER.debug("stopping fan manager")
         self.fan_manager.stop()
-        LOGGER.debug('saving controller profiles')
+        LOGGER.debug("saving controller profiles")
         for controller in self.controllers.values():
             controller.save_profile()
 

@@ -21,9 +21,14 @@ from collections import namedtuple
 
 from linux_thermaltake_rgb import LOGGER
 from linux_thermaltake_rgb.classified_object import ClassifiedObject
-from linux_thermaltake_rgb.globals import PROTOCOL_SET, PROTOCOL_LIGHT, PROTOCOL_FAN, PROTOCOL_GET
+from linux_thermaltake_rgb.globals import (
+    PROTOCOL_SET,
+    PROTOCOL_LIGHT,
+    PROTOCOL_FAN,
+    PROTOCOL_GET,
+)
 
-FanSpeed = namedtuple('FanSpeed', ['set_speed', 'rpm'])
+FanSpeed = namedtuple("FanSpeed", ["set_speed", "rpm"])
 
 
 class ThermaltakeDevice(ClassifiedObject):
@@ -35,13 +40,19 @@ class ThermaltakeDevice(ClassifiedObject):
 
     @classmethod
     def factory(cls, model, controller=None, port=None):
-        subclass_dict = {clazz.model.lower(): clazz for clazz in cls.inheritors() if clazz.model is not None}
+        subclass_dict = {
+            clazz.model.lower(): clazz
+            for clazz in cls.inheritors()
+            if clazz.model is not None
+        }
         try:
             dev = subclass_dict[model.lower()](controller, port)
-            LOGGER.debug('created {} device'.format(dev.__class__.__name__))
+            LOGGER.debug("created {} device".format(dev.__class__.__name__))
             return dev
         except KeyError:
-            LOGGER.warn(f'model {model} not found. controller: {controller} port: {port}')
+            LOGGER.warn(
+                f"model {model} not found. controller: {controller} port: {port}"
+            )
 
 
 class ThermaltakeRGBDevice(ThermaltakeDevice):
@@ -60,8 +71,10 @@ class ThermaltakeRGBDevice(ThermaltakeDevice):
         data = [PROTOCOL_SET, PROTOCOL_LIGHT, self.port, mode + speed]
         if values:
             data.extend(values)
-        LOGGER.debug('{} set lighting: raw hex: {}'.format(self.__class__.__name__, data))
-        self.controller.driver.write_out(data)
+        LOGGER.debug(
+            "{} set lighting: raw hex: {}".format(self.__class__.__name__, data)
+        )
+        self.controller.driver.write_out(data, length=192)
 
 
 class ThermaltakeFanDevice(ThermaltakeDevice):

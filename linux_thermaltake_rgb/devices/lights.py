@@ -21,30 +21,40 @@ from linux_thermaltake_rgb.devices import ThermaltakeRGBDevice
 
 
 class ThermaltakePR22D5Res(ThermaltakeRGBDevice):
-    model = 'Pacific PR22-D5 Plus'
+    model = "Pacific PR22-D5 Plus"
     num_leds = 12
     index_per_led = 3
 
 
 class ThermaltakeW4PlusWB(ThermaltakeRGBDevice):
-    model = 'Pacific W4 Plus CPU Waterblock'
+    model = "Pacific W4 Plus CPU Waterblock"
     num_leds = 12
     index_per_led = 3
 
 
 class ThermaltakeVGTX1080PlusWB(ThermaltakeRGBDevice):
-    model = 'Pacific V-GTX 1080Ti Plus GPU Waterblock'
+    model = "Pacific V-GTX 1080Ti Plus GPU Waterblock"
     num_leds = 12
     index_per_led = 3
 
 
 class ThermaltakeRadPlusLED(ThermaltakeRGBDevice):
-    model = 'Pacific Rad Plus LED Panel'
+    model = "Pacific Rad Plus LED Panel"
     num_leds = 12
     index_per_led = 3
 
 
 class ThermaltakeLumiPlusLED(ThermaltakeRGBDevice):
-    model = 'Lumi Plus LED Strip'
+    model = "Lumi Plus LED Strip"
     num_leds = 12
     index_per_led = 3
+
+
+class ThermaltakeP5DPD5Distro(ThermaltakeRGBDevice):
+    model = "Pacific Core P5 DP-D5 Plus Distro-Plate"
+    num_leds = 48
+    index_per_led = 3
+
+    def set_lighting(self, values: list = None, mode=0x18, speed=0x00) -> None:
+        super().set_lighting(values, mode, speed)
+        self.controller.driver.read_in()

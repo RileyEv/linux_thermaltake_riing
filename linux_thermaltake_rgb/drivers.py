@@ -24,7 +24,7 @@ from linux_thermaltake_rgb import LOGGER
 
 
 class ThermaltakeControllerDriver:
-    VENDOR_ID = 0x264a
+    VENDOR_ID = 0x264A
 
     def __init__(self, *args, **kwargs):
         self.vendor_id = self.VENDOR_ID
@@ -37,13 +37,12 @@ class ThermaltakeControllerDriver:
         raise NotImplementedError
 
     def _initialize_device(self):
-        self.device = usb.core.find(idVendor=self.vendor_id,
-                                    idProduct=self.product_id)
+        self.device = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
         # fail safe incase last device usage was dirty
         self.device.reset()
 
         if self.device is None:
-            raise ValueError('Device not found')
+            raise ValueError("Device not found")
 
         # Linux kernel sets up a device driver for USB device, which you have
         # to detach. Otherwise trying to interact with the device gives a
@@ -51,7 +50,11 @@ class ThermaltakeControllerDriver:
         try:
             self.device.detach_kernel_driver(0)
         except Exception:
-            LOGGER.warning('kernel driver already detached')
+            LOGGER.warning("kernel driver already detached")
+
+        # self.device.ctrl_transfer(
+        #     bmRequestType=0x21, bRequest=10, wIndex=0x0000, wValue=0x0000
+        # )
 
         self.device.set_configuration()
 
@@ -59,20 +62,28 @@ class ThermaltakeControllerDriver:
         try:
             usb.util.claim_interface(self.device, 0)
         except usb.core.USBError as e:
-            LOGGER.error('{} while claiming interface for device'.format(e))
+            LOGGER.error("{} while claiming interface for device".format(e))
             raise e
 
         self.cfg = self.device.get_active_configuration()
         self.interface = self.cfg[(0, 0)]
         self.endpoint_out = usb.util.find_descriptor(
             self.interface,
-            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
+            == usb.util.ENDPOINT_OUT,
+        )
         assert self.endpoint_out is not None
 
         self.endpoint_in = usb.util.find_descriptor(
             self.interface,
-            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN)
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
+            == usb.util.ENDPOINT_IN,
+        )
         assert self.endpoint_in is not None
+
+        print(usb.control.get_status(self.device))
+        print(usb.control.get_descriptor(self.device, 64, 0x03, 0x01, 0x0409))
+        print(usb.control.get_descriptor(self.device, 64, 0x03, 0x02, 0x0409))
 
         # initialize/reset the device
         self.init_controller()
@@ -93,9 +104,7 @@ class ThermaltakeControllerDriver:
         until desired length is attained
         """
         array = list(in_array)
-        array.extend(
-            self._generate_data_array(length - len(in_array))
-        )
+        array.extend(self._generate_data_array(length - len(in_array)))
         return array
 
     def write_out(self, data: list, length: int = 64) -> None:
@@ -118,14 +127,21 @@ class ThermaltakeControllerDriver:
 
 
 class ThermaltakeG3ControllerDriver(ThermaltakeControllerDriver):
-    PRODUCT_ID_BASE = 0x1fa5
+    PRODUCT_ID_BASE = 0x1FA5
 
     def init(self, unit=1):
         self.product_id = self.PRODUCT_ID_BASE + (unit - 1)
 
     def init_controller(self):
-        self.write_out([0xfe, 0x33])
+        self.write_out([0xFE, 0x33])
 
 
 class ThermaltakeRiingTrioControllerDriver(ThermaltakeG3ControllerDriver):
     PRODUCT_ID_BASE = 0x2135
+
+
+class ThermaltakeStandardControllerDriver(ThermaltakeG3ControllerDriver):
+    PRODUCT_ID_BASE = 0x2260
+
+    def init_controller(self):
+        self.write_out([0xFE, 0x33], length=192)

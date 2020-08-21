@@ -31,11 +31,12 @@ class RGB:
         FLOW = 0x00
         SPECTRUM = 0x04
         RIPPLE = 0x08
-        BLINK = 0x0c
+        BLINK = 0x0C
         PULSE = 0x10
         WAVE = 0x14
         BY_LED = 0x18
         FULL = 0x19
+        STATIC = 0x24
 
     class Speed:
         SLOW = 0x03
